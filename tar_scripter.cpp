@@ -1,43 +1,65 @@
-#include "command.hpp"
-#include <sstream>
+#include <sys/types.h>
+#include <dirent.h>
+#include <errno.h>
+#include <vector>
+#include <string>
+#include <iostream>
 #include <fstream>
 
-using std::cout;
-using std::endl;
-using std::string;
-using std::vector;
+using namespace std;
 
-void make_text_files();
+int getdir (string dir, vector<string> &files);
+bool is_tar(string filename);
 
-command cmd;
-vector<string> terminal_feedback, error_list;
+int main() {
+	string dir = string(".");
+	vector<string> files = vector<string>();
+	vector<string> list_of_tarballs;
 
-int main(int argc, char *argv[]) {
-	
+	getdir(dir, files);
+	for (unsigned int i = 0; i < files.size(); i++) {
+		cout << "file [" << i << "] = " << files[i] << endl;
+		if (is_tar(files[i]))
+			list_of_tarballs.push_back(files[i]);
+	}
+	ofstream fout;
+	fout.open("tard.sh");
+	if (fout.is_open()) {
+		cout << "creating script...";
+		for (int i = 0; i < list_of_tarballs.size(); i++) {
+			fout << "tar -xvf " << list_of_tarballs[i] << " && rm -rf " << list_of_tarballs[i];
+			int x = i + 1;
+			if (x < list_of_tarballs.size())
+				fout << " &&\\" << endl;
+			else
+				fout << endl;
+		}
+		fout.close();
+		cout << "[done]" << endl;
+	}
+	else
+		cout << "fout.open() failed!" << endl;
 	return 0;
 }
 
-void make_text_files() {
-	cmd.toggle_debug();
-	for (int i = 0; i < 100; i++) {
-		std::stringstream ss;
-		ss << i;
-		string s_to_i = ss.str();
-		string filename;
-		if (i < 10) {
-			filename = "text0" + s_to_i + ".txt";
-		}
-		else
-			filename = "text" + s_to_i + ".txt";
-		string term_cmd = "touch " + filename;
-		cmd.exec(term_cmd.c_str(), terminal_feedback, error_list);
-		std::ofstream fout;
-		fout.open(filename.c_str());
-		if (fout.is_open()) {
-			fout << "words and stuff" << endl;
-			fout.close();
-		}
-		else
-			cout << "fout.open() failed!" << endl;
+int getdir(string dir, vector<string> &files) {
+	DIR *dp;
+	struct dirent *dirp;
+	if((dp = opendir(dir.c_str())) == NULL) {
+		cout << "Error(" << errno << ") opening " << dir << endl;
+		return errno;
 	}
+	while ((dirp = readdir(dp)) != NULL) {
+		files.push_back(string(dirp->d_name));
+	}
+	closedir(dp);
+	return 0;
+}
+
+bool is_tar(string filename) {
+	size_t found = filename.find(".tar");
+	if (found != string::npos)
+		return true;
+	else
+		return false;
 }
