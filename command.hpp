@@ -7,7 +7,6 @@
 #include <string>
 #include <unistd.h>
 #include <vector>
-#include <deque>
 
 class command {
 public:
